@@ -35,5 +35,7 @@ vignettes/*.pdf
 # OS X data store files
 .DS_Store
 
-# LaTeX log file
-report.log
+# LaTeX-compiled files
+report/*.log
+report/*.aux
+report/*.synctex.gz
