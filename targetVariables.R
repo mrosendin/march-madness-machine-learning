@@ -5,10 +5,7 @@ library(caTools)
 library(ROCR)
 library(caret)
 
-
-# REMINDER:  NEED TO GET 2016 TOURNAMENT GAMES
-
-tourney = read.csv("TourneyCompactResults2017.csv")
+tourney = read.csv("./data/TourneyCompactResults.csv")
 
 tourney = tourney %>% filter(Season >2002) %>% select(-Wscore, -Lscore, -Numot, -Wloc)
 head(tourney)
@@ -24,9 +21,9 @@ tourney = rbind(data1, data2)
 table(tourney$Outcome)
 head(tourney)
 
-ratings = read.csv("teamRatings.csv")
+ratings = read.csv("./data/TeamRatings.csv")
 names(ratings)[2] = "TeamID"
-stats = read.csv("finalStats.csv")
+stats = read.csv("./data/FinalStats.csv")
 head(ratings)
 head(stats)
 
@@ -245,7 +242,7 @@ table(tourney.test$Outcome, pred.svm.radial)
 
 ########################### MAKING PREDICTIONS FOR 2017 ##########################################
 
-teams_2017 = read.csv("TourneyCompactResults2017.csv")
+teams_2017 = read.csv("./data/TourneyCompactResults.csv")
 
 teams_2017 = teams_2017 %>% filter(Season == 2017, Daynum < 138) %>% select(Wteam, Lteam)
 teams_2017 = c(teams_2017$Wteam, teams_2017$Lteam) #the teams that made bracket
@@ -273,7 +270,7 @@ names(games_comb)[24:length(games_comb)] = paste0(names(games_comb)[24:length(ga
 pred_2017 = predict(mod, newdata = games_comb, type = "response")
 hist(pred_2017)
 pred_2017 = cbind(games_comb[,1:2], pred_2017)
-write.csv(pred_2017, "sampleSubmission2.csv")
+write.csv(pred_2017, "./data/SampleSubmission.csv")
 
 #predict using random forest
 pred2_2017 = predict(mod.rf, newdata = games_comb, type = "prob")
@@ -286,7 +283,7 @@ ggplot(probs, aes(x = pred_2017, y = V2))+geom_point()+geom_abline(slope = 1, lw
   geom_hline(yintercept = .5, lwd =1, color = "red") +
   geom_vline(xintercept = .5, lwd=1, color="red")
 
-write.csv(pred_2017, "sampleSubmission2.csv")
+write.csv(pred_2017, "./data/SampleSubmission.csv")
 
 
 

@@ -15,17 +15,17 @@ for (i in 2003:2017){
 mydatFinal = mydatFinal[-1,]
 head(mydatFinal)
 # Get Rid of colnames between season tables
-mydatFinal = mydatFinal %>% filter(mydatFinal$` ` != "SRS", mydatFinal$` ` != "�")
+mydatFinal = mydatFinal %>% filter(mydatFinal$` ` != "SRS", mydatFinal$` ` != "?")
 mydatFinal = mydatFinal %>% dplyr::select(Season, School, Conf, W, L, Pts, Opp, MOV, SOS, OSRS, DSRS, SRS)
 mydatFinal = mydatFinal %>% filter(School != "School" | School != "")
-write.csv(mydatFinal,"nabeelStats.csv")
+write.csv(mydatFinal,"./data/NabeelStats.csv")
 
 # Join with Team IDs
 names(mydatFinal)[2] = "Team_Name"
 
-teams = read.csv("teams.csv")
+teams = read.csv("./data/Teams.csv")
 mydatFinal = left_join(teams, mydatFinal, by = ("Team_Name"))
 unique(mydatFinal$Season)
-write.csv(mydatFinal, "teamRatings.csv")
+write.csv(mydatFinal, "./data/TeamRatings.csv")
 
 
