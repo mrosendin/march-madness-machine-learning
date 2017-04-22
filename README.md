@@ -7,13 +7,15 @@ Final project for _INDENG 242: Applications in Data Analysis_ that predicts the 
 ```
 .
 ├── data
+│   ├── FinalStats.csv
+│   ├── NabeelStats.csv
 │   ├── RegularSeasonDetailedResults.csv
-│   ├── RegularSeasonDetailedResults2.csv
+│   ├── SampleSubmission.csv
+│   ├── TeamRatings.csv
 │   ├── Teams.csv
 │   ├── TourneyCompactResults.csv
-│   ├── TourneyCompactResults2.csv
-│   └── TourneyCompactResults2017.csv
-├── projectv1.R             # Data processing
+│   └── TourneySeeds.csv
+├── project.R               # Data processing
 ├── sampleSimulation.xlsx   # Simulation in Excel
 ├── targetVariables.R       # Predictive Models
 └── teamRatings.R           # Pull team ratings from external source
