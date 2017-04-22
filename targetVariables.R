@@ -72,7 +72,7 @@ table(tourney.test$Outcome, pred > 0.5)
 
 rocr.pred <- prediction(pred, tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
-plot(ROC.performance, colorize = TRUE)
+plot(ROC.performance, col='red')
 abline(0, 1)
 
 ### with regulatization
@@ -126,6 +126,13 @@ table(tourney.test$Outcome, pred.rf[,2]>.5)
 importance(mod.rf)
 varImpPlot(mod.rf)
 
+#Add random forest ROC plot
+rocr.pred <- prediction(pred.rf[,2], tourney.test$Outcome)
+ROC.performance <- performance(rocr.pred, "tpr", "fpr")
+par(new=T)
+plot(ROC.performance, col='blue')
+abline(0, 1)
+
 #### CART
 library(rpart)
 library(rpart.plot)
@@ -159,50 +166,12 @@ rpart.plot(mod.cart)
 pred.cart = predict(mod.cart, newdata = tourney.test, type = "prob")
 table(tourney.test$Outcome, pred.cart[,2]>.5)
 hist(pred.cart[,2])
-#### BOOSTING
-library(gbm)
-#boosting requires special outcome to be character not factor
-tourney.train.boost = tourney.train
-tourney.train.boost$Outcome = as.character(tourney.train.boost$Outcome)
 
-tourney.test.boost = tourney.test
-tourney.test.boost$Outcome = as.character(tourney.test.boost$Outcome)
-
-mod.boost = gbm(fmla,
-           data = tourney.train.boost,
-           distribution = "bernoulli",
-           n.trees = 1000,
-           interaction.depth = 9)
-
-# NOTE: we need to specify number of trees to get a prediction for boosting
-pred.boost = predict(mod.boost, newdata = tourney.test, n.trees = 1000, type = "response")
-
-table(tourney.test$Outcome, pred.boost >.5)
-
-# Cross validation now NOT WORKING
-
-tGrid = expand.grid(n.trees = seq(100,1000,50), interaction.depth = seq(1,20,5),
-                    shrinkage = seq(.01,.02,.005), n.minobsinnode = 10)
-
-set.seed(232)
-train.boost = train(fmla,
-                    data = tourney.train.boost,
-                    method = "gbm",
-                    tuneGrid = tGrid,
-                    trControl = trainControl(method="cv", number=5, verboseIter = FALSE),
-                    metric = "Accuracy",
-                    distribution = "bernoulli")
-
-train.boost$results
-
-ggplot(train.boost$results, aes(x = n.trees, y = Accuracy, colour = as.factor(interaction.depth))) + geom_line(lwd=1) + 
-  ylab("CV Accuracy") + theme(axis.title=element_text(size=13), axis.text=element_text(size=13)) + 
-  scale_color_discrete(name = "interaction.depth")
-
-train.boost$bestTune
-
-mod.boost = train.boost$finalModel
-pred.boost = predict(mod.boost, newdata =tourney.test.boost, n.trees = 500, type = "response")
+rocr.pred <- prediction(pred.cart[,2], tourney.test$Outcome)
+ROC.performance <- performance(rocr.pred, "tpr", "fpr")
+par(new=T)
+plot(ROC.performance, col='green')
+abline(0, 1)
 
 # SUPPORT VECTOR MACHINE
 library(e1071)
@@ -284,6 +253,64 @@ ggplot(probs, aes(x = pred_2017, y = V2))+geom_point()+geom_abline(slope = 1, lw
   geom_vline(xintercept = .5, lwd=1, color="red")
 
 write.csv(pred_2017, "./data/SampleSubmission.csv")
+
+
+
+
+
+
+
+
+
+
+################################## BOOSTING #############################################
+library(gbm)
+#boosting requires special outcome to be character not factor
+tourney.train.boost = tourney.train
+tourney.train.boost$Outcome = as.character(tourney.train.boost$Outcome)
+
+tourney.test.boost = tourney.test
+tourney.test.boost$Outcome = as.character(tourney.test.boost$Outcome)
+
+mod.boost = gbm(fmla,
+                data = tourney.train.boost,
+                distribution = "bernoulli",
+                n.trees = 1000,
+                interaction.depth = 9)
+
+# NOTE: we need to specify number of trees to get a prediction for boosting
+pred.boost = predict(mod.boost, newdata = tourney.test, n.trees = 1000, type = "response")
+
+table(tourney.test$Outcome, pred.boost >.5)
+
+# Cross validation now NOT WORKING
+
+tGrid = expand.grid(n.trees = seq(100,1000,50), interaction.depth = seq(1,20,5),
+                    shrinkage = seq(.01,.02,.005), n.minobsinnode = 10)
+
+set.seed(232)
+train.boost = train(fmla,
+                    data = tourney.train.boost,
+                    method = "gbm",
+                    tuneGrid = tGrid,
+                    trControl = trainControl(method="cv", number=5, verboseIter = FALSE),
+                    metric = "Accuracy",
+                    distribution = "bernoulli")
+
+train.boost$results
+
+ggplot(train.boost$results, aes(x = n.trees, y = Accuracy, colour = as.factor(interaction.depth))) + geom_line(lwd=1) + 
+  ylab("CV Accuracy") + theme(axis.title=element_text(size=13), axis.text=element_text(size=13)) + 
+  scale_color_discrete(name = "interaction.depth")
+
+train.boost$bestTune
+
+mod.boost = train.boost$finalModel
+pred.boost = predict(mod.boost, newdata =tourney.test.boost, n.trees = 500, type = "response")
+
+
+
+
 
 
 
