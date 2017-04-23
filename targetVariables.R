@@ -254,7 +254,7 @@ games_comb = games_comb %>% mutate(Seed_B = ifelse(TeamID==1307,14,Seed_B)) #fix
 games_comb = games_comb %>% mutate(Seed_B = ifelse(TeamID==1377,16,Seed_B)) #fix South dakota
 
 
-write.csv(games_comb, 'dataSetfor2017.csv')
+write.csv(games_comb, './data/DataSetfor2017.csv')
 unique(games_comb$Seed_A)
 #predict using logistic
 pred_2017 = predict(mod, newdata = games_comb, type = "response")
