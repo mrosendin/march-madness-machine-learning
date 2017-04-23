@@ -47,8 +47,16 @@ tourney = na.omit(tourney) #Omit NA's
 tourney = tourney %>% filter(Season != 2017)
 
 
+######## Some basic Statistics
+round(cor(tourney.train[,6:17]), digits = 3)
+round(cor(tourney.train[,21:38]), digits = 2)
+
+
 # SPlit data
 tourney$Outcome = as.factor(tourney$Outcome)
+tourney$Seed_A = as.factor(tourney$Seed_A)
+tourney$Seed_B = as.factor(tourney$Seed_B)
+
 set.seed(123) #111
 split = sample.split(tourney$Outcome, SplitRatio = 0.7)
 
@@ -60,15 +68,23 @@ xnam2 <- paste(names(tourney)[21:38],sep = "")
 xnam3 <- paste(names(tourney)[42:47], sep= "")
 xnam4 = c(xnam, xnam2, xnam3)
 
+#Different attributes for consideration
 fmla <- as.formula(paste("Outcome ~ ", paste(xnam4, collapse= "+")))
+fmla2 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + PCT_A + MOV_A + SOS_A + 
+  SRS_A + Seed_A + FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + PCT_B + MOV_B + SOS_B + 
+  SRS_B + Seed_B
+fmla3 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + PCT_A + MOV_A + SOS_A + 
+  SRS_A + FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + PCT_B + MOV_B + SOS_B + 
+  SRS_B + Seed_B
+fmla4 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + MOV_A + SOS_A + 
+  SRS_A +FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + MOV_B + SOS_B + SRS_B + PCT_A + PCT_B
 
 # LOGISTIC REGRESSION
-mod <- glm(fmla, data=tourney.train, family="binomial")
+mod <- glm(fmla4, data=tourney.train, family="binomial")
 summary(mod)
 
 pred = predict(mod, newdata = tourney.test, type = "response")
 hist(pred)
-summary(pred)
 table(tourney.test$Outcome, pred > 0.5)
 
 rocr.pred <- prediction(pred, tourney.test$Outcome)
@@ -89,7 +105,7 @@ tourney.test.mat = tourney.test.mat[,c(6:17, 21,38,42:47)]
 
 # GLM with regulatization
 mod3 = glmnet(tourney.train.mat, alpha = 0,tourney.train.mat.y, family = "binomial")
-pred3 = predict(mod3, newx = as(tourney.test.mat, "dgCMatrix"), type = "response", s = c(.05,.1,2))
+pred3 = predict(mod3, newx = as(tourney.test.mat, "dgCMatrix"), type = "response", s = c(.05,.1,2,3))
 table(tourney.test.mat.y, pred3[,3] >.5)
 
 
@@ -103,12 +119,16 @@ mod3.cv$lambda.min
 mod3.cv$lambda.1se
 
 pred2 = predict(mod3.cv, newx = as(tourney.test.mat, "dgCMatrix"), s = "lambda.min", type = "response")
+plot(pred2,pred)
+abline(0,1)
+abline(v=.5)
+abline(h=.5)
 table(tourney.test.mat.y, pred2 > 0.5)
 
-#### RANDOM FORREST
+#### RANDOM FOREST
 library(randomForest)
 
-train.rf <- train(fmla,
+train.rf <- train(fmla3,
                   data = tourney.train,
                   method = "rf",
                   tuneGrid = data.frame(mtry=1:20),
@@ -157,7 +177,7 @@ prp(mod.cart)
 cpVals = data.frame(cp = seq(0, .5, by=.005))
 
 # Perform Cross-Validation
-train.cart = train(fmla,
+train.cart = train(fmla3,
                     data = tourney.train,
                     method = "rpart",
                     tuneGrid = cpVals,
@@ -172,7 +192,8 @@ train.cart$bestTune
 mod.cart = train.cart$finalModel
 
 rpart.plot(mod.cart)
-
+prp(mod.cart)
+mod.cart$variable.importance
 pred.cart = predict(mod.cart, newdata = tourney.test, type = "prob")
 table(tourney.test$Outcome, pred.cart[,2]>.5)
 hist(pred.cart[,2])
@@ -180,7 +201,7 @@ hist(pred.cart[,2])
 rocr.pred <- prediction(pred.cart[,2], tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
 par(new=T)
-plot(ROC.performance, col='green')
+plot(ROC.performance, col='green', lwd=2)
 abline(0, 1)
 
 # SUPPORT VECTOR MACHINE
@@ -253,9 +274,13 @@ games_comb = games_comb %>% mutate(Seed_A = ifelse(Team_A==1377,16,Seed_A)) #fix
 games_comb = games_comb %>% mutate(Seed_B = ifelse(TeamID==1307,14,Seed_B)) #fix newmexico
 games_comb = games_comb %>% mutate(Seed_B = ifelse(TeamID==1377,16,Seed_B)) #fix South dakota
 
+#feed seed factors
+games_comb$Seed_A = as.factor(games_comb$Seed_A)
+games_comb$Seed_B = as.factor(games_comb$Seed_B)
 
-write.csv(games_comb, 'dataSetfor2017.csv')
-unique(games_comb$Seed_A)
+
+write.csv(games_comb, './data/dataSetfor2017.csv')
+unique(games_comb$Seed_B)
 #predict using logistic
 pred_2017 = predict(mod, newdata = games_comb, type = "response")
 hist(pred_2017)
@@ -269,7 +294,7 @@ pred2_2017 = cbind(games_comb[,1:2], pred2_2017[,2])
 #average probs
 probs = as.data.frame(cbind(pred_2017, pred2_2017[,3]))
 names(probs)[3:4] = c("logModelProb", "rfModelProb")
-probs = probs %>% mutate(avgProb = (logModelProb + rfModelProb)/2) #average the probabilities
+probs = probs %>% mutate(avgProb = (logModelProb + rfModelProb)/2, skewAvg = (3*logModelProb + rfModelProb)/4) #average the probabilities
 
 ggplot(probs, aes(x = logModelProb, y = rfModelProb))+geom_point()+
   geom_abline(slope = 1, lwd=1, color="blue")+
@@ -280,6 +305,8 @@ ggplot(probs, aes(x = logModelProb, y = rfModelProb))+geom_point()+
 write.csv(probs, "./data/SampleSubmission.csv")
 
 
+svm.pred.2017=predict(mod.svm.radial, newdata = games_comb)
+svm.pred.2017 = cbind(games_comb[,1:2], svm.pred.2017)
 
 
 
