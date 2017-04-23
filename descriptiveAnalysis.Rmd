@@ -1,0 +1,35 @@
+---
+title: "Descriptive Analysis"
+date: "4/22/2017"
+output: pdf_document
+---
+
+We want to create visualizations of the NCAA tournament over the years. Some ideas are:
+
+- A graph of which 5 teams have won the most NCAA titles
+- A graph of which 5 teams have entered the Final Four the most times
+- A plot of TOPG and 3APG for the winning team from 2003-2017 (The idea is we want to see how these statistics have changed over time)
+
+```{r}
+library(dplyr)
+library(plyr)
+
+# Get the champion for all years
+tourney <- read.csv('./data/TourneyCompactResults.csv')
+teams <- read.csv('./data/Teams.csv')
+tourney <- merge(tourney, teams, by.x="Wteam", by.y="Team_Id")
+championshipGameTeams <- tourney %>% filter(Daynum == 154)
+champions <- championshipGameTeams[, c('Team_Name', 'Season')] %>% arrange(desc(Season))
+
+# Count the frequency of winning teams from 1985-2017
+championCount <- count(champions, 'Team_Name') %>% arrange(desc(freq))
+```
+
+Create a bar plot of the championship teams from 1985-2017. 
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+p <- ggplot(head(championCount, 5), aes(Team_Name, freq))
+p + labs(title="Most Titles (1985-2017)", x="Team", y="Count") + geom_bar(stat = "identity")
+```
