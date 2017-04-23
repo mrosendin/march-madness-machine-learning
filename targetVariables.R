@@ -41,7 +41,7 @@ names(tourney)[6:length(tourney)] = paste0(names(tourney)[6:length(tourney)], "_
 names(tourney)[3] = "Team_A"
 names(tourney)[4] = "TeamID"
 tourney = left_join(tourney, finalStats, by = c("TeamID", "Season"))
-names(tourney)[26:length(tourney)] = paste0(names(tourney)[26:length(tourney)], "_B")
+names(tourney)[27:length(tourney)] = paste0(names(tourney)[27:length(tourney)], "_B")
 
 tourney = na.omit(tourney) #Omit NA's
 tourney = tourney %>% filter(Season != 2017)
@@ -56,8 +56,8 @@ tourney.train <- filter(tourney, split == TRUE)
 tourney.test <- filter(tourney, split == FALSE)
 
 xnam <- paste(names(tourney)[6:17], sep= "")
-xnam2 <- paste(names(tourney)[21:37],sep = "")
-xnam3 <- paste(names(tourney)[41:45], sep= "")
+xnam2 <- paste(names(tourney)[21:38],sep = "")
+xnam3 <- paste(names(tourney)[42:47], sep= "")
 xnam4 = c(xnam, xnam2, xnam3)
 
 fmla <- as.formula(paste("Outcome ~ ", paste(xnam4, collapse= "+")))
@@ -67,12 +67,13 @@ mod <- glm(fmla, data=tourney.train, family="binomial")
 summary(mod)
 
 pred = predict(mod, newdata = tourney.test, type = "response")
+hist(pred)
 summary(pred)
 table(tourney.test$Outcome, pred > 0.5)
 
 rocr.pred <- prediction(pred, tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
-plot(ROC.performance, colorize = TRUE)
+plot(ROC.performance, col='red')
 abline(0, 1)
 
 ### with regulatization
@@ -80,11 +81,11 @@ abline(0, 1)
 library(glmnet)
 tourney.train.mat = as.matrix(tourney.train)
 tourney.train.mat.y = as.factor(tourney.train.mat[,5])
-tourney.train.mat = tourney.train.mat[,c(6:17, 21,37,41:45)]
+tourney.train.mat = tourney.train.mat[,c(6:17, 21,38,42:47)]
 
 tourney.test.mat = as.matrix(tourney.test)
 tourney.test.mat.y = as.factor(tourney.test.mat[,5])
-tourney.test.mat = tourney.test.mat[,c(6:17, 21,37,41:45)]
+tourney.test.mat = tourney.test.mat[,c(6:17, 21,38,42:47)]
 
 # GLM with regulatization
 mod3 = glmnet(tourney.train.mat, alpha = 0,tourney.train.mat.y, family = "binomial")
@@ -110,7 +111,7 @@ library(randomForest)
 train.rf <- train(fmla,
                   data = tourney.train,
                   method = "rf",
-                  tuneGrid = data.frame(mtry=1:34),
+                  tuneGrid = data.frame(mtry=1:20),
                   trControl = trainControl(method="cv", number=10, verboseIter = FALSE),
                   metric = "Accuracy")
 train.rf$results
@@ -122,9 +123,25 @@ ggplot(train.rf$results, aes(x = mtry, y = Accuracy)) + geom_point(size = 3) +
   geom_line() + scale_x_continuous(breaks = (seq(1,34,2)))
 
 pred.rf = predict(mod.rf, newdata = tourney.test, type = "prob") #  Make Prediction and get probabilities
+hist(pred.rf)
 table(tourney.test$Outcome, pred.rf[,2]>.5)
-importance(mod.rf)
 varImpPlot(mod.rf)
+
+#Add random forest ROC plot
+rocr.pred <- prediction(pred.rf[,2], tourney.test$Outcome)
+ROC.performance <- performance(rocr.pred, "tpr", "fpr")
+par(new=T)
+plot(ROC.performance, col='blue')
+abline(0, 1)
+
+acc.perf = performance(rocr.pred, measure = "acc")
+plot(acc.perf)
+
+#Optimal Cutoff -- not necessary but good to know
+ind = which.max( slot(acc.perf, "y.values")[[1]] )
+acc = slot(acc.perf, "y.values")[[1]][ind]
+cutoff = slot(acc.perf, "x.values")[[1]][ind]
+print(c(accuracy= acc, cutoff = cutoff))
 
 #### CART
 library(rpart)
@@ -159,50 +176,12 @@ rpart.plot(mod.cart)
 pred.cart = predict(mod.cart, newdata = tourney.test, type = "prob")
 table(tourney.test$Outcome, pred.cart[,2]>.5)
 hist(pred.cart[,2])
-#### BOOSTING
-library(gbm)
-#boosting requires special outcome to be character not factor
-tourney.train.boost = tourney.train
-tourney.train.boost$Outcome = as.character(tourney.train.boost$Outcome)
 
-tourney.test.boost = tourney.test
-tourney.test.boost$Outcome = as.character(tourney.test.boost$Outcome)
-
-mod.boost = gbm(fmla,
-           data = tourney.train.boost,
-           distribution = "bernoulli",
-           n.trees = 1000,
-           interaction.depth = 9)
-
-# NOTE: we need to specify number of trees to get a prediction for boosting
-pred.boost = predict(mod.boost, newdata = tourney.test, n.trees = 1000, type = "response")
-
-table(tourney.test$Outcome, pred.boost >.5)
-
-# Cross validation now NOT WORKING
-
-tGrid = expand.grid(n.trees = seq(100,1000,50), interaction.depth = seq(1,20,5),
-                    shrinkage = seq(.01,.02,.005), n.minobsinnode = 10)
-
-set.seed(232)
-train.boost = train(fmla,
-                    data = tourney.train.boost,
-                    method = "gbm",
-                    tuneGrid = tGrid,
-                    trControl = trainControl(method="cv", number=5, verboseIter = FALSE),
-                    metric = "Accuracy",
-                    distribution = "bernoulli")
-
-train.boost$results
-
-ggplot(train.boost$results, aes(x = n.trees, y = Accuracy, colour = as.factor(interaction.depth))) + geom_line(lwd=1) + 
-  ylab("CV Accuracy") + theme(axis.title=element_text(size=13), axis.text=element_text(size=13)) + 
-  scale_color_discrete(name = "interaction.depth")
-
-train.boost$bestTune
-
-mod.boost = train.boost$finalModel
-pred.boost = predict(mod.boost, newdata =tourney.test.boost, n.trees = 500, type = "response")
+rocr.pred <- prediction(pred.cart[,2], tourney.test$Outcome)
+ROC.performance <- performance(rocr.pred, "tpr", "fpr")
+par(new=T)
+plot(ROC.performance, col='green')
+abline(0, 1)
 
 # SUPPORT VECTOR MACHINE
 library(e1071)
@@ -250,7 +229,7 @@ teams_2017 = c(teams_2017$Wteam, teams_2017$Lteam) #the teams that made bracket
 #all pairwise matcheups
 games_comb = as.data.frame(t(combn(teams_2017, 2)))
 colnames(games_comb) = c("Team_A", "Team_B")
-#games_comb = expand.grid(teams_2017)
+
 dim(games_comb)
 finalStats_2017 = finalStats %>% filter(Season == 2017)
 
@@ -264,13 +243,23 @@ names(games_comb)[4:length(games_comb)] = paste0(names(games_comb)[4:length(game
 names(games_comb)[1] = "Team_A"
 names(games_comb)[2] = "TeamID"
 games_comb = left_join(games_comb, finalStats_2017, by = "TeamID")
-names(games_comb)[24:length(games_comb)] = paste0(names(games_comb)[24:length(games_comb)], "_B")
+names(games_comb)[25:length(games_comb)] = paste0(names(games_comb)[25:length(games_comb)], "_B")
 
+head(games_comb)
+
+#Some teams have NA for seeds so fix them
+games_comb = games_comb %>% mutate(Seed_A = ifelse(Team_A==1307,14,Seed_A)) #fix newmexico
+games_comb = games_comb %>% mutate(Seed_A = ifelse(Team_A==1377,16,Seed_A)) #fix South dakota
+games_comb = games_comb %>% mutate(Seed_B = ifelse(TeamID==1307,14,Seed_B)) #fix newmexico
+games_comb = games_comb %>% mutate(Seed_B = ifelse(TeamID==1377,16,Seed_B)) #fix South dakota
+
+
+write.csv(games_comb, 'dataSetfor2017.csv')
+unique(games_comb$Seed_A)
 #predict using logistic
 pred_2017 = predict(mod, newdata = games_comb, type = "response")
 hist(pred_2017)
 pred_2017 = cbind(games_comb[,1:2], pred_2017)
-write.csv(pred_2017, "./data/SampleSubmission.csv")
 
 #predict using random forest
 pred2_2017 = predict(mod.rf, newdata = games_comb, type = "prob")
@@ -278,12 +267,75 @@ hist(pred2_2017[,2])
 pred2_2017 = cbind(games_comb[,1:2], pred2_2017[,2])
 
 #average probs
-probs = as.data.frame(cbind(pred_2017, pred2_2017[,2]))
-ggplot(probs, aes(x = pred_2017, y = V2))+geom_point()+geom_abline(slope = 1, lwd=1, color="red")+
+probs = as.data.frame(cbind(pred_2017, pred2_2017[,3]))
+names(probs)[3:4] = c("logModelProb", "rfModelProb")
+probs = probs %>% mutate(avgProb = (logModelProb + rfModelProb)/2) #average the probabilities
+
+ggplot(probs, aes(x = logModelProb, y = rfModelProb))+geom_point()+
+  geom_abline(slope = 1, lwd=1, color="blue")+
   geom_hline(yintercept = .5, lwd =1, color = "red") +
   geom_vline(xintercept = .5, lwd=1, color="red")
 
-write.csv(pred_2017, "./data/SampleSubmission.csv")
+
+write.csv(probs, "./data/SampleSubmission.csv")
+
+
+
+
+
+
+
+
+
+
+################################## BOOSTING #############################################
+library(gbm)
+#boosting requires special outcome to be character not factor
+tourney.train.boost = tourney.train
+tourney.train.boost$Outcome = as.character(tourney.train.boost$Outcome)
+
+tourney.test.boost = tourney.test
+tourney.test.boost$Outcome = as.character(tourney.test.boost$Outcome)
+
+mod.boost = gbm(fmla,
+                data = tourney.train.boost,
+                distribution = "bernoulli",
+                n.trees = 1000,
+                interaction.depth = 9)
+
+# NOTE: we need to specify number of trees to get a prediction for boosting
+pred.boost = predict(mod.boost, newdata = tourney.test, n.trees = 1000, type = "response")
+
+table(tourney.test$Outcome, pred.boost >.5)
+
+# Cross validation now NOT WORKING
+
+tGrid = expand.grid(n.trees = seq(100,1000,50), interaction.depth = seq(1,20,5),
+                    shrinkage = seq(.01,.02,.005), n.minobsinnode = 10)
+
+set.seed(232)
+train.boost = train(fmla,
+                    data = tourney.train.boost,
+                    method = "gbm",
+                    tuneGrid = tGrid,
+                    trControl = trainControl(method="cv", number=5, verboseIter = FALSE),
+                    metric = "Accuracy",
+                    distribution = "bernoulli")
+
+train.boost$results
+
+ggplot(train.boost$results, aes(x = n.trees, y = Accuracy, colour = as.factor(interaction.depth))) + geom_line(lwd=1) + 
+  ylab("CV Accuracy") + theme(axis.title=element_text(size=13), axis.text=element_text(size=13)) + 
+  scale_color_discrete(name = "interaction.depth")
+
+train.boost$bestTune
+
+mod.boost = train.boost$finalModel
+pred.boost = predict(mod.boost, newdata =tourney.test.boost, n.trees = 500, type = "response")
+
+
+
+
 
 
 
