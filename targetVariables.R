@@ -8,8 +8,6 @@ library(caret)
 tourney = read.csv("./data/TourneyCompactResults.csv")
 
 tourney = tourney %>% filter(Season >2002) %>% select(-Wscore, -Lscore, -Numot, -Wloc)
-head(tourney)
-nrow(tourney)
 
 #SPlit half data to be 1's indicating win by team A, and half to be 0's indicating loss by team A
 data1 = tourney %>% filter(Season <2010) %>% mutate(Outcome = 1) %>% rename(team_A = Wteam, team_B = Lteam)
@@ -18,8 +16,6 @@ data2 = tourney %>% filter(Season >2009) %>% mutate(Outcome = 0) %>% select(Seas
 tail(data2)
 
 tourney = rbind(data1, data2)
-table(tourney$Outcome)
-head(tourney)
 
 ratings = read.csv("./data/TeamRatings.csv")
 names(ratings)[2] = "TeamID"
@@ -49,13 +45,11 @@ tourney = tourney %>% filter(Season != 2017)
 
 ######## Some basic Statistics
 round(cor(tourney.train[,6:17]), digits = 3)
-round(cor(tourney.train[,21:38]), digits = 2)
-
+names(tourney.train)
 
 # SPlit data
 tourney$Outcome = as.factor(tourney$Outcome)
-tourney$Seed_A = as.factor(tourney$Seed_A)
-tourney$Seed_B = as.factor(tourney$Seed_B)
+
 
 set.seed(123) #111
 split = sample.split(tourney$Outcome, SplitRatio = 0.7)
@@ -76,11 +70,14 @@ fmla2 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_
 fmla3 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + PCT_A + MOV_A + SOS_A + 
   SRS_A + FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + PCT_B + MOV_B + SOS_B + 
   SRS_B + Seed_B
-fmla4 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + MOV_A + SOS_A + 
+fmla4 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + MOV_A + SOS_A +
   SRS_A +FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + MOV_B + SOS_B + SRS_B + PCT_A + PCT_B
 
+fmla5 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + MOV_A + SOS_A +
+  SRS_A +FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + MOV_B + SOS_B + SRS_B
+
 # LOGISTIC REGRESSION
-mod <- glm(fmla4, data=tourney.train, family="binomial")
+mod <- glm(fmla5, data=tourney.train, family="binomial")
 summary(mod)
 
 pred = predict(mod, newdata = tourney.test, type = "response")
@@ -119,7 +116,7 @@ mod3.cv$lambda.min
 mod3.cv$lambda.1se
 
 pred2 = predict(mod3.cv, newx = as(tourney.test.mat, "dgCMatrix"), s = "lambda.min", type = "response")
-plot(pred2,pred)
+hist(pred2)
 abline(0,1)
 abline(v=.5)
 abline(h=.5)
@@ -128,12 +125,12 @@ table(tourney.test.mat.y, pred2 > 0.5)
 #### RANDOM FOREST
 library(randomForest)
 
-train.rf <- train(fmla3,
+train.rf <- train(fmla5,
                   data = tourney.train,
                   method = "rf",
-                  tuneGrid = data.frame(mtry=1:20),
-                  trControl = trainControl(method="cv", number=10, verboseIter = FALSE),
-                  metric = "Accuracy")
+                  tuneGrid = data.frame(mtry=1:25),
+                  trControl = trainControl(method="cv", number = 5, verboseIter = T),
+                  metric = "Kappa")
 train.rf$results
 train.rf$bestTune
 mod.rf = train.rf$finalModel
@@ -275,8 +272,8 @@ games_comb = games_comb %>% mutate(Seed_B = ifelse(TeamID==1307,14,Seed_B)) #fix
 games_comb = games_comb %>% mutate(Seed_B = ifelse(TeamID==1377,16,Seed_B)) #fix South dakota
 
 #feed seed factors
-games_comb$Seed_A = as.factor(games_comb$Seed_A)
-games_comb$Seed_B = as.factor(games_comb$Seed_B)
+games_comb$Seed_A = as.numeric(games_comb$Seed_A)
+games_comb$Seed_B = as.numeric(games_comb$Seed_B)
 
 
 write.csv(games_comb, './data/dataSetfor2017.csv')
