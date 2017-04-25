@@ -50,7 +50,6 @@ names(tourney.train)
 # SPlit data
 tourney$Outcome = as.factor(tourney$Outcome)
 
-
 set.seed(123) #111
 split = sample.split(tourney$Outcome, SplitRatio = 0.7)
 
@@ -94,11 +93,11 @@ abline(0, 1)
 library(glmnet)
 tourney.train.mat = as.matrix(tourney.train)
 tourney.train.mat.y = as.factor(tourney.train.mat[,5])
-tourney.train.mat = tourney.train.mat[,c(6:17, 21,38,42:47)]
+tourney.train.mat = tourney.train.mat[,c(6:17, 21:38,42:47)]
 
 tourney.test.mat = as.matrix(tourney.test)
 tourney.test.mat.y = as.factor(tourney.test.mat[,5])
-tourney.test.mat = tourney.test.mat[,c(6:17, 21,38,42:47)]
+tourney.test.mat = tourney.test.mat[,c(6:17, 21:38,42:47)]
 
 # GLM with regulatization
 mod3 = glmnet(tourney.train.mat, alpha = 0,tourney.train.mat.y, family = "binomial")
@@ -115,8 +114,9 @@ plot(mod3.cv)
 mod3.cv$lambda.min
 mod3.cv$lambda.1se
 
-pred2 = predict(mod3.cv, newx = as(tourney.test.mat, "dgCMatrix"), s = "lambda.min", type = "response")
-hist(pred2)
+pred3 = predict(mod3.cv, newx = as(tourney.test.mat, "dgCMatrix"), s = "lambda.min", type = "response")
+hist(pred3)
+plot(pred3, pred)
 abline(0,1)
 abline(v=.5)
 abline(h=.5)
@@ -124,13 +124,13 @@ table(tourney.test.mat.y, pred2 > 0.5)
 
 #### RANDOM FOREST
 library(randomForest)
-
+set.seed(100)
 train.rf <- train(fmla5,
                   data = tourney.train,
                   method = "rf",
-                  tuneGrid = data.frame(mtry=1:25),
-                  trControl = trainControl(method="cv", number = 5, verboseIter = T),
-                  metric = "Kappa")
+                  tuneGrid = data.frame(mtry=1:15),
+                  trControl = trainControl(method="cv", number = 5, verboseIter = F),
+                  metric = "Accuracy")
 train.rf$results
 train.rf$bestTune
 mod.rf = train.rf$finalModel
@@ -164,17 +164,10 @@ print(c(accuracy= acc, cutoff = cutoff))
 library(rpart)
 library(rpart.plot)
 
-mod.cart = rpart(fmla,
-             data = tourney.train, 
-             method="class",
-             cp=.05)
-rpart.plot(mod.cart)
-prp(mod.cart)
-
 cpVals = data.frame(cp = seq(0, .5, by=.005))
 
 # Perform Cross-Validation
-train.cart = train(fmla3,
+train.cart = train(fmla5,
                     data = tourney.train,
                     method = "rpart",
                     tuneGrid = cpVals,
@@ -278,22 +271,56 @@ games_comb$Seed_B = as.numeric(games_comb$Seed_B)
 
 write.csv(games_comb, './data/dataSetfor2017.csv')
 unique(games_comb$Seed_B)
+
+############################# PREDICTIONS ##############################
+
 #predict using logistic
-pred_2017 = predict(mod, newdata = games_comb, type = "response")
-hist(pred_2017)
-pred_2017 = cbind(games_comb[,1:2], pred_2017)
+probs = predict(mod, newdata = games_comb, type = "response")
+hist(probs)
+probs = cbind(games_comb[,1:2], logModel = probs)
+
+#predict using logistic with regulization
+games_comb.mat = as.matrix(games_comb)
+games_comb.mat = games_comb.mat[,c(4:15, 19:24,26:37,41:46)]
+
+hold = predict(mod3.cv, newx = as(games_comb.mat, "dgCMatrix"), s = "lambda.min", type = "response")
+hist(hold)
+probs = cbind(probs, hold)
 
 #predict using random forest
-pred2_2017 = predict(mod.rf, newdata = games_comb, type = "prob")
-hist(pred2_2017[,2])
-pred2_2017 = cbind(games_comb[,1:2], pred2_2017[,2])
+hold = predict(mod.rf, newdata = games_comb, type = "prob")
+hist(hold[,2])
+probs = cbind(probs, rfModel = hold[,2])
+names(probs)[4] = "logRegModel"
 
-#average probs
-probs = as.data.frame(cbind(pred_2017, pred2_2017[,3]))
-names(probs)[3:4] = c("logModelProb", "rfModelProb")
-probs = probs %>% mutate(avgProb = (logModelProb + rfModelProb)/2, skewAvg = (3*logModelProb + rfModelProb)/4) #average the probabilities
+# log vs RF
+ggplot(probs, aes(x = logModel, y = rfModel))+geom_point()+
+  geom_abline(slope = 1, lwd=1, color="blue")+
+  geom_hline(yintercept = .5, lwd =1, color = "red") +
+  geom_vline(xintercept = .5, lwd=1, color="red")
 
-ggplot(probs, aes(x = logModelProb, y = rfModelProb))+geom_point()+
+probs %>% filter(logModel > .5, rfModel < .5) %>% summarise(count=n()) #bottom right
+probs %>% filter(logModel <= .5, rfModel <= .5) %>% summarise(count=n()) #bottom left 
+probs %>% filter(logModel < .5, rfModel > .5) %>% summarise(count=n()) #top left
+probs %>% filter(logModel >= .5, rfModel >= .5) %>% summarise(count=n()) #top right
+# 84.2% consistent classification
+# 15.8%
+
+#log vs logRegul
+ggplot(probs, aes(x = logModel, y = logRegModel))+geom_point()+
+  geom_abline(slope = 1, lwd=1, color="blue")+
+  geom_hline(yintercept = .5, lwd =1, color = "red") +
+  geom_vline(xintercept = .5, lwd=1, color="red")
+
+probs %>% filter(logModel > .5, logRegModel < .5) %>% summarise(count=n()) #bottom right 20%
+probs %>% filter(logModel <= .5, logRegModel <= .5) %>% summarise(count=n()) #bottom left 
+probs %>% filter(logModel < .5, logRegModel > .5) %>% summarise(count=n()) #top left
+probs %>% filter(logModel >= .5, logRegModel >= .5) %>% summarise(count=n()) #top right
+# 78.2% consistent classification
+# 21.8%
+
+#logRegul vs RF
+ggplot(probs, aes(x = rfModel, y = logRegModel))+geom_point()+
   geom_abline(slope = 1, lwd=1, color="blue")+
   geom_hline(yintercept = .5, lwd =1, color = "red") +
   geom_vline(xintercept = .5, lwd=1, color="red")
