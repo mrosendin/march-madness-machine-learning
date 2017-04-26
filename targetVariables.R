@@ -13,15 +13,13 @@ tourney = tourney %>% filter(Season >2002) %>% select(-Wscore, -Lscore, -Numot, 
 data1 = tourney %>% filter(Season <2010) %>% mutate(Outcome = 1) %>% rename(team_A = Wteam, team_B = Lteam)
 data2 = tourney %>% filter(Season >2009) %>% mutate(Outcome = 0) %>% select(Season, Daynum, Lteam, everything()) %>% 
   rename(team_A = Lteam, team_B = Wteam)
-tail(data2)
 
 tourney = rbind(data1, data2)
 
 ratings = read.csv("./data/TeamRatings.csv")
 names(ratings)[2] = "TeamID"
 stats = read.csv("./data/FinalStats.csv")
-head(ratings)
-head(stats)
+
 
 #Final stats of every team by season (nabeels + kaggles)
 finalStats = left_join(stats, ratings, by = c("TeamID", "Season")) %>% select(-Pts, -W, -L, -X.y, -X.x)
@@ -83,6 +81,7 @@ pred = predict(mod, newdata = tourney.test, type = "response")
 hist(pred)
 table(tourney.test$Outcome, pred > 0.5)
 
+## ROC CURVE ##
 rocr.pred <- prediction(pred, tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
 plot(ROC.performance, col='red')
@@ -120,7 +119,15 @@ plot(pred3, pred)
 abline(0,1)
 abline(v=.5)
 abline(h=.5)
-table(tourney.test.mat.y, pred2 > 0.5)
+table(tourney.test.mat.y, pred3 > 0.5)
+
+## ROC CURVE ##
+rocr.pred <- prediction(pred3, tourney.test$Outcome)
+ROC.performance <- performance(rocr.pred, "tpr", "fpr")
+par(new=T)
+plot(ROC.performance, col='black')
+abline(0, 1)
+
 
 #### RANDOM FOREST
 library(randomForest)
@@ -188,10 +195,11 @@ pred.cart = predict(mod.cart, newdata = tourney.test, type = "prob")
 table(tourney.test$Outcome, pred.cart[,2]>.5)
 hist(pred.cart[,2])
 
+## ROC CURVE ##
 rocr.pred <- prediction(pred.cart[,2], tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
 par(new=T)
-plot(ROC.performance, col='green', lwd=2)
+plot(ROC.performance, col='green')
 abline(0, 1)
 
 # SUPPORT VECTOR MACHINE
@@ -331,9 +339,6 @@ write.csv(probs, "./data/SampleSubmission.csv")
 
 svm.pred.2017=predict(mod.svm.radial, newdata = games_comb)
 svm.pred.2017 = cbind(games_comb[,1:2], svm.pred.2017)
-
-
-
 
 
 
