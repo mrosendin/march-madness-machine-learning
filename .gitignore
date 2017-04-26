@@ -16,6 +16,7 @@
 
 # RStudio files
 .Rproj.user/
+*.Rproj
 
 # produced vignettes
 vignettes/*.html
@@ -39,3 +40,4 @@ vignettes/*.pdf
 report/*.log
 report/*.aux
 report/*.synctex.gz
+.Rproj.user
