@@ -11,7 +11,7 @@ tourney = tourney %>% filter(Season >2002) %>% select(-Wscore, -Lscore, -Numot, 
 
 #SPlit half data to be 1's indicating win by team A, and half to be 0's indicating loss by team A
 data1 = tourney %>% filter(Season <2010) %>% mutate(Outcome = 1) %>% rename(team_A = Wteam, team_B = Lteam)
-data2 = tourney %>% filter(Season >2009) %>% mutate(Outcome = 0) %>% select(Season, Daynum, Lteam, everything()) %>% 
+data2 = tourney %>% filter(Season >2009) %>% mutate(Outcome = 0) %>% select(Season, Daynum, Lteam, everything()) %>%
   rename(team_A = Lteam, team_B = Wteam)
 
 tourney = rbind(data1, data2)
@@ -61,11 +61,11 @@ xnam4 = c(xnam, xnam2, xnam3)
 
 #Different attributes for consideration
 fmla <- as.formula(paste("Outcome ~ ", paste(xnam4, collapse= "+")))
-fmla2 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + PCT_A + MOV_A + SOS_A + 
-  SRS_A + Seed_A + FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + PCT_B + MOV_B + SOS_B + 
+fmla2 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + PCT_A + MOV_A + SOS_A +
+  SRS_A + Seed_A + FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + PCT_B + MOV_B + SOS_B +
   SRS_B + Seed_B
-fmla3 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + PCT_A + MOV_A + SOS_A + 
-  SRS_A + FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + PCT_B + MOV_B + SOS_B + 
+fmla3 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + PCT_A + MOV_A + SOS_A +
+  SRS_A + FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + PCT_B + MOV_B + SOS_B +
   SRS_B + Seed_B
 fmla4 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + MOV_A + SOS_A +
   SRS_A +FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + MOV_B + SOS_B + SRS_B + PCT_A + PCT_B
@@ -141,8 +141,8 @@ train.rf$results
 train.rf$bestTune
 mod.rf = train.rf$finalModel
 
-ggplot(train.rf$results, aes(x = mtry, y = Accuracy)) + geom_point(size = 3) + 
-  ylab("CV Accuracy") + theme_bw() + theme(axis.title=element_text(size=18), axis.text=element_text(size=18)) + 
+ggplot(train.rf$results, aes(x = mtry, y = Accuracy)) + geom_point(size = 3) +
+  ylab("CV Accuracy") + theme_bw() + theme(axis.title=element_text(size=18), axis.text=element_text(size=18)) +
   geom_line() + scale_x_continuous(breaks = (seq(1,34,2)))
 
 pred.rf = predict(mod.rf, newdata = tourney.test, type = "prob") #  Make Prediction and get probabilities
@@ -227,7 +227,7 @@ pred.svm.radial = predict(mod.svm.radial, newdata = tourney.test)
 table(tourney.test$Outcome, pred.svm.radial)
 
 #radial with CV
-mod.svm.radial = tune(svm, fmla, data = tourney.train, kernel = "radial", 
+mod.svm.radial = tune(svm, fmla, data = tourney.train, kernel = "radial",
                       ranges = list(cost = seq(.001,10,1), gamma = seq(.001,.01,.001)))
 summary(mod.svm.radial)
 
@@ -279,7 +279,13 @@ games_comb$Seed_B = as.numeric(games_comb$Seed_B)
 write.csv(games_comb, './data/dataSetfor2017.csv')
 unique(games_comb$Seed_B)
 
+<<<<<<< HEAD
 ############################# PREDICTIONS ##############################
+
+=======
+>>>>>>> 3c59db0edada3e2bdfc31aecb51ed5d10ded218d
+write.csv(games_comb, './data/DataSetfor2017.csv')
+unique(games_comb$Seed_A)
 
 #predict using logistic
 probs = predict(mod, newdata = games_comb, type = "response")
@@ -307,7 +313,7 @@ ggplot(probs, aes(x = logModel, y = rfModel))+geom_point()+
   geom_vline(xintercept = .5, lwd=1, color="red")
 
 probs %>% filter(logModel > .5, rfModel < .5) %>% summarise(count=n()) #bottom right
-probs %>% filter(logModel <= .5, rfModel <= .5) %>% summarise(count=n()) #bottom left 
+probs %>% filter(logModel <= .5, rfModel <= .5) %>% summarise(count=n()) #bottom left
 probs %>% filter(logModel < .5, rfModel > .5) %>% summarise(count=n()) #top left
 probs %>% filter(logModel >= .5, rfModel >= .5) %>% summarise(count=n()) #top right
 # 84.2% consistent classification
@@ -320,7 +326,7 @@ ggplot(probs, aes(x = logModel, y = logRegModel))+geom_point()+
   geom_vline(xintercept = .5, lwd=1, color="red")
 
 probs %>% filter(logModel > .5, logRegModel < .5) %>% summarise(count=n()) #bottom right 20%
-probs %>% filter(logModel <= .5, logRegModel <= .5) %>% summarise(count=n()) #bottom left 
+probs %>% filter(logModel <= .5, logRegModel <= .5) %>% summarise(count=n()) #bottom left
 probs %>% filter(logModel < .5, logRegModel > .5) %>% summarise(count=n()) #top left
 probs %>% filter(logModel >= .5, logRegModel >= .5) %>% summarise(count=n()) #top right
 # 78.2% consistent classification
@@ -379,20 +385,11 @@ train.boost = train(fmla,
 
 train.boost$results
 
-ggplot(train.boost$results, aes(x = n.trees, y = Accuracy, colour = as.factor(interaction.depth))) + geom_line(lwd=1) + 
-  ylab("CV Accuracy") + theme(axis.title=element_text(size=13), axis.text=element_text(size=13)) + 
+ggplot(train.boost$results, aes(x = n.trees, y = Accuracy, colour = as.factor(interaction.depth))) + geom_line(lwd=1) +
+  ylab("CV Accuracy") + theme(axis.title=element_text(size=13), axis.text=element_text(size=13)) +
   scale_color_discrete(name = "interaction.depth")
 
 train.boost$bestTune
 
 mod.boost = train.boost$finalModel
 pred.boost = predict(mod.boost, newdata =tourney.test.boost, n.trees = 500, type = "response")
-
-
-
-
-
-
-
-
-

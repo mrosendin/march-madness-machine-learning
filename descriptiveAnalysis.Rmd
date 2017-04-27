@@ -130,11 +130,27 @@ titleTeamStats <- getTitleTeamStats(seasonStats, titleTeams)
 ```
 
 ```{r, echo=FALSE}
-p <- ggplot(data=titleTeamStats, aes(x=titleTeamStats['Season'], y=titleTeamStats['TOPG']))
-p + labs(title="Title Team Season TOPG (2003-2017)", x="Season", y="TOPG") + geom_line() +
-    scale_y_continuous() + scale_x_continuous()
+p1 <- ggplot(data=titleTeamStats, aes(titleTeamStats['Season'])) +
+  labs(title="Title Team Season Stats (2003-2017)", x="Season", y="Stat") + 
+  geom_line(aes(y=titleTeamStats['TOPG'], color='Turnovers per game')) +
+  geom_line(aes(y=titleTeamStats['ORPG'] + titleTeamStats['DRPG'], color='Rebounds per game')) +
+  geom_line(aes(y=titleTeamStats['ORPG'] + titleTeamStats['APG'], color='Assists per game')) +
+  geom_line(aes(y=titleTeamStats['ORPG'] + titleTeamStats['PFPG'], color='Personal fouls per game')) +
+  geom_line(aes(y=titleTeamStats['ORPG'] + titleTeamStats['BPG'], color='Blocks per game')) +
+  geom_line(aes(y=titleTeamStats['SPG'] + titleTeamStats['SPG'], color='Steals per game')) +
+  geom_line(aes(y=titleTeamStats['PPG'], color='Points per game')) +
+  scale_x_continuous(breaks=seq(2003, 2017, 2)) +
+  scale_y_continuous(limits=c(0, 90))
+p1
 
-p <- ggplot(data=titleTeamStats, aes(x=titleTeamStats['Season'], y=titleTeamStats['PPG']))
-p + labs(title="Title Team Season PPG (2003-2017)", x="Season", y="PPG") + geom_line() +
-    scale_y_continuous() + scale_x_continuous()
+library(scales)
+
+p2 <- ggplot(data=titleTeamStats, aes(titleTeamStats['Season'])) +
+  labs(title="Title Team Season Percentage-based Stats (2003-2017)", x="Season", y="Stat") + 
+  geom_line(aes(y=titleTeamStats['FGP'], color='Field goal %')) +
+  geom_line(aes(y=titleTeamStats['TPP'], color='3 pt. %')) +
+  geom_line(aes(y=titleTeamStats['PCT'], color='Win %')) +
+  scale_x_continuous(breaks=seq(2003, 2017, 2)) +
+  scale_y_continuous(labels = percent_format(), limits=c(0,1))
+p2
 ```
