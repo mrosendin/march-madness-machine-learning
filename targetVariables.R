@@ -71,10 +71,21 @@ fmla4 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_
   SRS_A +FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + MOV_B + SOS_B + SRS_B + PCT_A + PCT_B
 
 fmla5 = Outcome ~ FGP_A + TPP_A + FTP_A + ORPG_A + DRPG_A + APG_A + SPG_A + BPG_A + PFPG_A + MOV_A + SOS_A +
-  SRS_A +FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + MOV_B + SOS_B + SRS_B
+  SRS_A +FGP_B + TPP_B + FTP_B + ORPG_B + DRPG_B + APG_B + SPG_B + BPG_B + PFPG_B + MOV_B + SOS_B + SRS_B + Seed_A + Seed_B
 
+fmla6 = Outcome ~ FGP_A + ORPG_A + APG_A + SPG_A + BPG_A + MOV_A + SOS_A + PCT_A + PCT_B+
+  SRS_A +FGP_B + ORPG_B + APG_B + SPG_B + BPG_B + MOV_B + SOS_B + SRS_B + Seed_A + Seed_B
+
+fmla7 = Outcome ~ FGP_A + ORPG_A + APG_A + SPG_A + BPG_A + MOV_A + SOS_A +
+  SRS_A + FGP_B + ORPG_B + APG_B + SPG_B + BPG_B + MOV_B + SOS_B + SRS_B + Seed_A + Seed_B
+
+fmla8 = Outcome ~ FGP_A + ORPG_A + APG_A + SPG_A + BPG_A + MOV_A + SOS_A +
+  SRS_A + FGP_B + ORPG_B + APG_B + SPG_B + BPG_B + MOV_B + SOS_B + SRS_B
+
+fmla9 = Outcome ~ FGP_A + ORPG_A + APG_A + SPG_A + BPG_A + SOS_A +
+  SRS_A + FGP_B + ORPG_B + APG_B + SPG_B + BPG_B + SOS_B + SRS_B + Seed_A + Seed_B
 # LOGISTIC REGRESSION
-mod <- glm(fmla5, data=tourney.train, family="binomial")
+mod <- glm(fmla8, data=tourney.train, family="binomial")
 summary(mod)
 
 pred = predict(mod, newdata = tourney.test, type = "response")
@@ -131,7 +142,7 @@ abline(0, 1)
 #### RANDOM FOREST
 library(randomForest)
 set.seed(100)
-train.rf <- train(fmla5,
+train.rf <- train(fmla8,
                   data = tourney.train,
                   method = "rf",
                   tuneGrid = data.frame(mtry=1:15),
@@ -153,8 +164,7 @@ varImpPlot(mod.rf)
 #Add random forest ROC plot
 rocr.pred <- prediction(pred.rf[,2], tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
-par(new=T)
-plot(ROC.performance, col='blue')
+plot(ROC.performance, col='blue', add = T)
 abline(0, 1)
 
 acc.perf = performance(rocr.pred, measure = "acc")
