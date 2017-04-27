@@ -124,8 +124,7 @@ table(tourney.test.mat.y, pred3 > 0.5)
 ## ROC CURVE ##
 rocr.pred <- prediction(pred3, tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
-par(new=T)
-plot(ROC.performance, col='black')
+plot(ROC.performance, col='black', add = T)
 abline(0, 1)
 
 
