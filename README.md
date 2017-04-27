@@ -29,7 +29,7 @@ The CSVs from the data folder are from [Kaggle](https://www.kaggle.com/c/march-m
 
 For recent versions of RStudio, the Knit PDF button does not seem to work. Instead, enter the following command in the Console to generate a new PDF:
 
-```
+``` r
 render('descriptiveAnalysis.Rmd')
 ```
 
