@@ -279,8 +279,11 @@ games_comb$Seed_B = as.numeric(games_comb$Seed_B)
 write.csv(games_comb, './data/dataSetfor2017.csv')
 unique(games_comb$Seed_B)
 
+<<<<<<< HEAD
 ############################# PREDICTIONS ##############################
 
+=======
+>>>>>>> 3c59db0edada3e2bdfc31aecb51ed5d10ded218d
 write.csv(games_comb, './data/DataSetfor2017.csv')
 unique(games_comb$Seed_A)
 
