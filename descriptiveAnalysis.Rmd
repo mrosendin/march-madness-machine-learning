@@ -9,8 +9,8 @@ output: pdf_document
 Which 5 teams have won the most NCAA titles?
 
 ```{r}
-library(dplyr)
 library(plyr)
+library(dplyr)
 
 # Get the champion for all years
 tourney <- read.csv('./data/TourneyCompactResults.csv')
@@ -171,4 +171,45 @@ p3 <- ggplot(data=tourneyTeamStats, aes(x=tourneyTeamStats['Season'], y=tourneyT
   geom_point(shape=1) + scale_x_continuous(breaks=seq(2003, 2017, 2)) +
   scale_y_continuous() + geom_smooth(method=lm)
 p3
+```
+
+What are the seed records in the first round?
+
+```{r, echo=FALSE}
+seeds <- read.csv('./data/TourneySeeds.csv')
+seeds$Seed <- substring(seeds$Seed, 2, 3)
+
+# Need to replace tourney$Wteam and tourney$Lteam with tourney$Seed
+getTeamSeeds <- function(tournamentDataset, seedDataset) {
+  tourneyCopy <- tournamentDataset
+  colnames(tourneyCopy)[3] = 'Wseed'
+  colnames(tourneyCopy)[5] = 'Lseed'
+
+  tourneyCopy <- subset(tourneyCopy, Daynum < 138)
+  
+  for (i in 1:nrow(tournamentDataset)) {
+    tourneySeason <- tournamentDataset[i, 1] # Season
+    wteam <- tournamentDataset[i, 3] # Wteam
+    lteam <- tournamentDataset[i, 5] # Lteam
+    
+    # Update Wteam with seed
+    teamSeed <- as.numeric(subset(seeds, Season == tourneySeason & Team == wteam)$Seed)
+    if (length(teamSeed) == 0) next
+    tourneyCopy[i, 3] <- as.numeric(teamSeed)
+    # Update Lteam with seed
+    teamSeed <- as.numeric(subset(seeds, Season == tourneySeason & Team == lteam)$Seed)
+    if (length(teamSeed) == 0) next
+    tourneyCopy[i, 5] <- as.numeric(teamSeed)
+  }
+  return(tourneyCopy)
+}
+
+tourneyWithSeeds <- getTeamSeeds(tourney, seeds)
+
+seedWinCount <- count(tourneyWithSeeds, 'Wseed') %>% arrange(Wseed)
+
+p <- ggplot(seedWinCount)
+p + labs(title="Wins in the first round (1985-2017)", x="Seed", y="Wins") +
+  geom_bar(aes(x=Wseed, y=freq), stat = "identity", lwd=0.2) +
+  scale_x_continuous(breaks=seq(1, 16, 1)) + geom_text(aes(x=Wseed, y=freq, label=freq), position=position_dodge(width=0.9), vjust=-0.25)
 ```
