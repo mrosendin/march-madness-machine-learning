@@ -172,3 +172,20 @@ p3 <- ggplot(data=tourneyTeamStats, aes(x=tourneyTeamStats['Season'], y=tourneyT
   scale_y_continuous() + geom_smooth(method=lm)
 p3
 ```
+
+What about margin of victory over the years? Could the tournament be getting more competitive?
+
+```{r}
+scores <- tourney[, c('Wscore', 'Lscore', 'Season', 'Daynum')] %>% arrange(desc(Season))
+scores <- scores %>% filter(Daynum > 144 & Daynum < 152)
+scores <- mutate(scores, Margin = Wscore - Lscore)
+
+avgScores <- group_by(scores, Season) %>% summarize(m = mean(Margin))
+
+# Plot with regression line
+p4 <- ggplot(data=avgScores, aes(x=avgScores['Season'], y=avgScores['m'])) +
+  labs(title="Averaged Final Four Game Margins of Victory per Season (1985-2017)", x="Season", y="Margin of Victory (Points)") + 
+  geom_point(shape=0) + scale_x_continuous(breaks=seq(1985, 2017, 2)) +
+  scale_y_continuous() + geom_smooth(method=lm)
+p4
+```
