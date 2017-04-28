@@ -199,24 +199,40 @@ seeds$Seed <- substring(seeds$Seed, 2, 3)
 # Need to replace tourney$Wteam and tourney$Lteam with tourney$Seed
 getTeamSeeds <- function(tournamentDataset, seedDataset) {
   tourneyCopy <- tournamentDataset
-  colnames(tourneyCopy)[3] = 'Wseed'
-  colnames(tourneyCopy)[5] = 'Lseed'
+  tourneyCopy$Wseed <- 0
+  tourneyCopy$Lseed <- 0
 
-  tourneyCopy <- subset(tourneyCopy, Daynum < 138)
+  # 1st round
+  # tourneyCopy <- tourneyCopy %>% filter(Daynum > 135 & Daynum < 138)
   
-  for (i in 1:nrow(tournamentDataset)) {
-    tourneySeason <- tournamentDataset[i, 1] # Season
-    wteam <- tournamentDataset[i, 3] # Wteam
-    lteam <- tournamentDataset[i, 5] # Lteam
+  # 2nd round
+  # tourneyCopy <- tourneyCopy %>% filter(Daynum > 137 & Daynum < 141)
+  
+  # Sweet 16
+  # tourneyCopy <- tourneyCopy %>% filter(Daynum > 140 & Daynum < 145)
+  
+  # Elite 8
+  # tourneyCopy <- tourneyCopy %>% filter(Daynum > 144 & Daynum < 147)
+  
+  # Final 4
+  # tourneyCopy <- tourneyCopy %>% filter(Daynum > 146 & Daynum < 153)
+  
+  # Title Game
+  tourneyCopy <- tourneyCopy %>% filter(Daynum == 154)
+  
+  for (i in 1:nrow(tourneyCopy)) {
+    tourneySeason <- tourneyCopy[i, 1] # Season
+    wteam <- tourneyCopy[i, 3] # Wteam
+    lteam <- tourneyCopy[i, 5] # Lteam
     
     # Update Wteam with seed
     teamSeed <- as.numeric(subset(seeds, Season == tourneySeason & Team == wteam)$Seed)
     if (length(teamSeed) == 0) next
-    tourneyCopy[i, 3] <- as.numeric(teamSeed)
+    tourneyCopy[i, grep("Wseed", colnames(tourneyCopy))] <- as.numeric(teamSeed)
     # Update Lteam with seed
     teamSeed <- as.numeric(subset(seeds, Season == tourneySeason & Team == lteam)$Seed)
     if (length(teamSeed) == 0) next
-    tourneyCopy[i, 5] <- as.numeric(teamSeed)
+    tourneyCopy[i, grep("Lseed", colnames(tourneyCopy))] <- as.numeric(teamSeed)
   }
   return(tourneyCopy)
 }
@@ -226,7 +242,8 @@ tourneyWithSeeds <- getTeamSeeds(tourney, seeds)
 seedWinCount <- count(tourneyWithSeeds, 'Wseed') %>% arrange(Wseed)
 
 p <- ggplot(seedWinCount)
-p + labs(title="Wins in the first round (1985-2017)", x="Seed", y="Wins") +
-  geom_bar(aes(x=Wseed, y=freq), stat = "identity", lwd=0.2) +
-  scale_x_continuous(breaks=seq(1, 16, 1)) + geom_text(aes(x=Wseed, y=freq, label=freq), position=position_dodge(width=0.9), vjust=-0.25)
+p + labs(title="Title Game Wins by Seed (1985-2017)", x="Seed", y="Wins") +
+  geom_bar(aes(x=Wseed, y=freq), stat = "identity", lwd=0.1) +
+  scale_x_continuous(breaks=seq(1, 16, 1)) + geom_text(aes(x=Wseed, y=freq, label=freq), position=position_dodge(width=1.0), vjust=-0.0)
 ```
+
