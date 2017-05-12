@@ -82,22 +82,23 @@ fmla7 = Outcome ~ FGP_A + ORPG_A + APG_A + SPG_A + BPG_A + MOV_A + SOS_A +
 fmla8 = Outcome ~ FGP_A + ORPG_A + APG_A + SPG_A + BPG_A + MOV_A + SOS_A +
   SRS_A + FGP_B + ORPG_B + APG_B + SPG_B + BPG_B + MOV_B + SOS_B + SRS_B
 
-fmla9 = Outcome ~ FGP_A + ORPG_A + APG_A + SPG_A + BPG_A + SOS_A +
-  SRS_A + FGP_B + ORPG_B + APG_B + SPG_B + BPG_B + SOS_B + SRS_B + Seed_A + Seed_B
 # LOGISTIC REGRESSION
-mod <- glm(fmla8, data=tourney.train, family="binomial")
+mod <- glm(fmla7, data=tourney.train, family="binomial")
 summary(mod)
 
 pred = predict(mod, newdata = tourney.test, type = "response")
 hist(pred)
 table(tourney.test$Outcome, pred > 0.5)
+ggplot(as.data.frame(pred)) + geom_histogram(aes(pred), binwidth = .05, col = "black") + 
+  labs(x="probabilities", title="Logistic Regression")+
+  theme(axis.text=element_text(size=16))
 
 ## ROC CURVE ##
 rocr.pred <- prediction(pred, tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
-plot(ROC.performance, col='red')
+plot(ROC.performance, col='red', lwd = 2)
 abline(0, 1)
-
+as.numeric(performance(rocr.pred, "auc")@y.values)
 ### with regulatization
 
 library(glmnet)
@@ -132,21 +133,24 @@ abline(v=.5)
 abline(h=.5)
 table(tourney.test.mat.y, pred3 > 0.5)
 
+ggplot(as.data.frame(pred3)) + geom_histogram(aes(pred3[,1]), binwidth = .05, col = "black") + 
+  labs(x="probabilities", title="Logistic Regression")+
+  theme(axis.text=element_text(size=16))
+
 ## ROC CURVE ##
 rocr.pred <- prediction(pred3, tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
-plot(ROC.performance, col='black', add = T)
-abline(0, 1)
-
+plot(ROC.performance, col='black', add = T, lwd = 2)
+as.numeric(performance(rocr.pred, "auc")@y.values)
 
 #### RANDOM FOREST
 library(randomForest)
 set.seed(100)
-train.rf <- train(fmla8,
+train.rf <- train(fmla7,
                   data = tourney.train,
                   method = "rf",
-                  tuneGrid = data.frame(mtry=1:15),
-                  trControl = trainControl(method="cv", number = 5, verboseIter = F),
+                  tuneGrid = data.frame(mtry=1:25),
+                  trControl = trainControl(method="cv", number = 10, verboseIter = F),
                   metric = "Accuracy")
 train.rf$results
 train.rf$bestTune
@@ -157,15 +161,19 @@ ggplot(train.rf$results, aes(x = mtry, y = Accuracy)) + geom_point(size = 3) +
   geom_line() + scale_x_continuous(breaks = (seq(1,34,2)))
 
 pred.rf = predict(mod.rf, newdata = tourney.test, type = "prob") #  Make Prediction and get probabilities
-hist(pred.rf)
+ggplot(as.data.frame(pred.rf)) + geom_histogram(aes(pred.rf[,2]), binwidth = .1, col = "black") + 
+  labs(x="probabilities", title="Random Forest")+
+  theme(axis.text=element_text(size=16))
+
 table(tourney.test$Outcome, pred.rf[,2]>.5)
 varImpPlot(mod.rf)
 
 #Add random forest ROC plot
 rocr.pred <- prediction(pred.rf[,2], tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
-plot(ROC.performance, col='blue', add = T)
-abline(0, 1)
+plot(ROC.performance, col='blue', add = T, lwd =2)
+as.numeric(performance(rocr.pred, "auc")@y.values)
+
 
 acc.perf = performance(rocr.pred, measure = "acc")
 plot(acc.perf)
@@ -183,7 +191,7 @@ library(rpart.plot)
 cpVals = data.frame(cp = seq(0, .5, by=.005))
 
 # Perform Cross-Validation
-train.cart = train(fmla5,
+train.cart = train(fmla7,
                     data = tourney.train,
                     method = "rpart",
                     tuneGrid = cpVals,
@@ -207,22 +215,22 @@ hist(pred.cart[,2])
 ## ROC CURVE ##
 rocr.pred <- prediction(pred.cart[,2], tourney.test$Outcome)
 ROC.performance <- performance(rocr.pred, "tpr", "fpr")
-par(new=T)
-plot(ROC.performance, col='green')
-abline(0, 1)
+plot(ROC.performance, col='green', add = T, lwd=2)
+legend(.65,.60,c("logModel", "logModelReg", "rfModel", "cartModel"), lty = c(1,1), lwd = c(2.5,2.5), col=c("red", "black", "blue", "green"))
+as.numeric(performance(rocr.pred, "auc")@y.values)
 
 # SUPPORT VECTOR MACHINE
 library(e1071)
 
 #Default SVM
-mod.svm <- svm(fmla, data = tourney.train, cost = .5, probability = TRUE, kernel= "linear")
+mod.svm <- svm(fmla7, data = tourney.train, cost = .5, probability = TRUE, kernel= "linear")
 pred.svm = predict(mod.svm, newdata = tourney.test, probability = TRUE)
 table(tourney.test$Outcome, pred.svm)
 attributes(mod.svm)
 summary(mod.svm)
 # With Cross_validation
 set.seed(99)
-mod.svm = tune(svm, fmla, data = tourney.train, kernel = "linear", ranges = list(cost = seq(.001,10,1))) #within the e1071 package and does 10-fold by default
+mod.svm = tune(svm, fmla7, data = tourney.train, kernel = "linear", ranges = list(cost = seq(.001,10,1))) #within the e1071 package and does 10-fold by default
 mod.svm$performances
 
 ggplot(mod.svm$performances, aes(cost, error))+geom_point(size =2) +geom_line() + scale_x_continuous(breaks = seq(0,8,1))
@@ -232,16 +240,17 @@ pred.svm = predict(mod.svm, newdata = tourney.test)
 table(tourney.test$Outcome, pred.svm)
 
 # radial kernel
-mod.svm.radial = svm(fmla, data = tourney.train, cost = 1, gamma = .01, kernel = "radial")
+mod.svm.radial = svm(fmla7, data = tourney.train, cost = seq(1,5,.5), gamma = seq(.01,1,.01), kernel = "radial")
 pred.svm.radial = predict(mod.svm.radial, newdata = tourney.test)
 table(tourney.test$Outcome, pred.svm.radial)
 
 #radial with CV
-mod.svm.radial = tune(svm, fmla, data = tourney.train, kernel = "radial", 
+mod.svm.radial = tune(svm, fmla7, data = tourney.train, kernel = "radial", 
                       ranges = list(cost = seq(.001,10,1), gamma = seq(.001,.01,.001)))
 summary(mod.svm.radial)
 
-ggplot(mod.svm.radial$performances, aes(cost, error)) + geom_point() + geom_line(aes(color = as.factor(gamma)), lwd = 1)
+ggplot(mod.svm.radial$performances, aes(cost, error)) + geom_point() + geom_line(aes(color = as.factor(gamma)), lwd = 1)+
+  theme(axis.text=element_text(size=16))
 mod.svm.radial$best.performance
 mod.svm.radial = mod.svm.radial$best.model
 pred.svm.radial = predict(mod.svm.radial, newdata=tourney.test)
@@ -314,7 +323,9 @@ names(probs)[4] = "logRegModel"
 ggplot(probs, aes(x = logModel, y = rfModel))+geom_point()+
   geom_abline(slope = 1, lwd=1, color="blue")+
   geom_hline(yintercept = .5, lwd =1, color = "red") +
-  geom_vline(xintercept = .5, lwd=1, color="red")
+  geom_vline(xintercept = .5, lwd=1, color="red")+
+  theme(axis.text=element_text(size=16))
+
 
 probs %>% filter(logModel > .5, rfModel < .5) %>% summarise(count=n()) #bottom right
 probs %>% filter(logModel <= .5, rfModel <= .5) %>% summarise(count=n()) #bottom left 
@@ -327,7 +338,9 @@ probs %>% filter(logModel >= .5, rfModel >= .5) %>% summarise(count=n()) #top ri
 ggplot(probs, aes(x = logModel, y = logRegModel))+geom_point()+
   geom_abline(slope = 1, lwd=1, color="blue")+
   geom_hline(yintercept = .5, lwd =1, color = "red") +
-  geom_vline(xintercept = .5, lwd=1, color="red")
+  geom_vline(xintercept = .5, lwd=1, color="red")+
+  theme(axis.text=element_text(size=16))
+
 
 probs %>% filter(logModel > .5, logRegModel < .5) %>% summarise(count=n()) #bottom right 20%
 probs %>% filter(logModel <= .5, logRegModel <= .5) %>% summarise(count=n()) #bottom left 
@@ -340,7 +353,9 @@ probs %>% filter(logModel >= .5, logRegModel >= .5) %>% summarise(count=n()) #to
 ggplot(probs, aes(x = rfModel, y = logRegModel))+geom_point()+
   geom_abline(slope = 1, lwd=1, color="blue")+
   geom_hline(yintercept = .5, lwd =1, color = "red") +
-  geom_vline(xintercept = .5, lwd=1, color="red")
+  geom_vline(xintercept = .5, lwd=1, color="red") +
+  theme(axis.text=element_text(size=16))
+
 
 
 write.csv(probs, "./data/SampleSubmission.csv")
